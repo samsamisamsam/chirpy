@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -58,63 +57,4 @@ func (c *apiConfig) handleMetrics(w http.ResponseWriter, r *http.Request) {
 func (c *apiConfig) handleReset(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	c.fileserverHits.Store(0)
-}
-
-func handleValidateChirp(w http.ResponseWriter, r *http.Request) {
-	type chirpJSON struct {
-		Body []byte `json:"body"`
-	}
-	type chirpError struct {
-		Error []byte `json:"error"`
-	}
-	type chirpValid struct {
-		Valid []byte `json:"valid"`
-	}
-
-	chirp := chirpJSON{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&chirp)
-	if err != nil {
-		respBody := chirpError{
-			Error: []byte("Error: Something went wrong"),
-		}
-		dat, err := json.Marshal(respBody)
-		if err != nil {
-			respBody = chirpError{
-				Error: []byte("Error: Something went wrong"),
-			}
-		}
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(400)
-		w.Write(dat)
-	} else if len(chirp.Body) > 140 {
-		respBody := chirpError{
-			Error: []byte("Error: chirp is too long"),
-		}
-		dat, err := json.Marshal(respBody)
-		if err != nil {
-			respBody = chirpError{
-				Error: []byte("Error: Something went wrong"),
-			}
-		}
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(400)
-		w.Write(dat)
-	} else {
-		respBody := chirpValid{
-			Valid: []byte("valid"),
-		}
-		dat, err := json.Marshal(respBody)
-		if err != nil {
-			respBody := chirpError{
-				Error: []byte("Something went wrong"),
-			}
-			w.Header().Add("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write(respBody.Error)
-		}
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(dat)
-	}
 }
