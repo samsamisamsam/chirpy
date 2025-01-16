@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samsamisamsam/chirpy/internal/auth"
 	"github.com/samsamisamsam/chirpy/internal/database"
 )
 
@@ -37,14 +38,24 @@ func (cfg *apiConfig) handleGetAllChirps(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *apiConfig) handleChirps(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "unauthorized", err)
+		return
+	}
+	id, err := auth.ValidateJWT(tokenString, cfg.tokenSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "unauthorized", err)
+		return
+	}
+
 	type chirpRequest struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 
 	chirpReq := chirpRequest{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&chirpReq)
+	err = decoder.Decode(&chirpReq)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
 		return
@@ -59,20 +70,28 @@ func (cfg *apiConfig) handleChirps(w http.ResponseWriter, r *http.Request) {
 	cleanedChirpBody := cleanChirp(chirpReq.Body)
 	params := database.CreateChirpParams{
 		Body:   cleanedChirpBody,
-		UserID: chirpReq.UserID,
+		UserID: id,
 	}
 	chirp, err := cfg.dbQueries.CreateChirp(r.Context(), params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error creating the chirp", err)
 		return
 	}
-	respondWithJSON(w, http.StatusCreated, chirpDB{
+	respondWithJSON(w, http.StatusCreated, database.Chirp{
 		ID:        chirp.ID,
 		CreatedAt: chirp.CreatedAt,
 		UpdatedAt: chirp.UpdatedAt,
 		Body:      chirp.Body,
-		UserID:    chirp.UserID,
+		UserID:    id,
 	})
+}
+
+type ChirpResponse struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	Token     string    `json:"token"`
 }
 
 func cleanChirp(chirp string) string {
