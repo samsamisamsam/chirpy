@@ -7,3 +7,8 @@ returning *;
 select ID, CREATED_AT, UPDATED_AT, BODY, USER_ID
 from CHIRPS
 order by CREATED_AT;
+
+-- name: GetChirp :one
+select ID, CREATED_AT, UPDATED_AT, BODY, USER_ID
+from CHIRPS
+where ID = $1;

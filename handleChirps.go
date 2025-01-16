@@ -10,6 +10,22 @@ import (
 	"github.com/samsamisamsam/chirpy/internal/database"
 )
 
+func (cfg *apiConfig) handleGetChirp(w http.ResponseWriter, r *http.Request) {
+	pathValue := r.PathValue("id")
+	id, err := uuid.Parse(pathValue)
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		respondWithError(w, 404, "Error converting id parameter to uuid", err)
+		return
+	}
+	chirp, err := cfg.dbQueries.GetChirp(r.Context(), id)
+	if err != nil {
+		respondWithError(w, 404, "Error getting chirp from the database", err)
+		return
+	}
+	respondWithJSON(w, 200, chirp)
+}
+
 func (cfg *apiConfig) handleGetAllChirps(w http.ResponseWriter, r *http.Request) {
 	chirps, err := cfg.dbQueries.GetAllChirps(r.Context())
 	if err != nil {
