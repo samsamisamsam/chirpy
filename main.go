@@ -24,8 +24,9 @@ func main() {
 	dbQueries := database.New(db)
 
 	apiCfg := apiConfig{
-		dbQueries: dbQueries,
-		platform:  os.Getenv("PLATFORM"),
+		dbQueries:   dbQueries,
+		platform:    os.Getenv("PLATFORM"),
+		tokenSecret: os.Getenv("TOKENSECRET"),
 	}
 
 	const port = "8080"
@@ -55,6 +56,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries      *database.Queries
 	platform       string
+	tokenSecret    string
 }
 
 func (c *apiConfig) mwareHits(next http.Handler) http.Handler {

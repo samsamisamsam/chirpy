@@ -28,11 +28,24 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "email/password combination not valid", err)
 		return
 	}
+
+	expiresIn := time.Hour
+	if 0 < loginInfo.ExpiresInSeconds && loginInfo.ExpiresInSeconds < 3600 {
+		expiresIn = time.Duration(loginInfo.ExpiresInSeconds) * time.Second
+	}
+
+	tokenString, err := auth.MakeJWT(user.ID, cfg.tokenSecret, expiresIn)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error making token", err)
+		return
+	}
+
 	userWithoutPassword := UserWithoutPassword{
 		ID:        user.ID,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
+		Token:     tokenString,
 	}
 	respondWithJSON(w, http.StatusOK, userWithoutPassword)
 }
@@ -42,11 +55,13 @@ type UserWithoutPassword struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 type LoginInfo struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ExpiresInSeconds int    `json:"expires_in_seconds"`
 }
 
 func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
