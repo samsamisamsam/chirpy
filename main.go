@@ -21,8 +21,10 @@ func main() {
 		log.Fatal("Error connecting to the database")
 	}
 
+	dbQueries := database.New(db)
+
 	apiCfg := apiConfig{
-		dbQueries: database.New(db),
+		dbQueries: dbQueries,
 		platform:  os.Getenv("PLATFORM"),
 	}
 
@@ -33,9 +35,9 @@ func main() {
 	mux.Handle("/app/", http.StripPrefix("/app", apiCfg.mwareHits(http.FileServer(http.Dir(filepathRoot)))))
 	mux.HandleFunc("GET /api/healthz", handleReadiness)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handleMetrics)
-	mux.HandleFunc("POST /admin/reset", apiCfg.handleReset)
 	mux.HandleFunc("POST /api/validate_chirp", handleValidateChirp)
 	mux.HandleFunc("POST /api/users", apiCfg.handleCreateUser)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handleDeleteAllUsers)
 
 	srv := http.Server{
 		Addr:    ":" + port,
@@ -71,9 +73,4 @@ func (c *apiConfig) handleMetrics(w http.ResponseWriter, r *http.Request) {
 </html>`,
 		int(c.fileserverHits.Load()))
 	w.Write([]byte(html))
-}
-
-func (c *apiConfig) handleReset(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	c.fileserverHits.Store(0)
 }

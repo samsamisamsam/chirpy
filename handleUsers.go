@@ -37,12 +37,13 @@ func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, userJSON)
 }
 
-func (cfg *apiConfig) deleteAllUsers(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handleDeleteAllUsers(w http.ResponseWriter, r *http.Request) {
 	if cfg.platform != "dev" {
 		respondWithError(w, http.StatusForbidden, "Endpoint only accessible in developpement", nil)
 		return
 	}
 	cfg.dbQueries.DeleteAllUsers(r.Context())
+	cfg.fileserverHits.Store(0)
 	respondWithJSON(w, http.StatusOK, nil)
 }
 
