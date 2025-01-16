@@ -3,14 +3,15 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 func handleValidateChirp(w http.ResponseWriter, r *http.Request) {
 	type chirpJSON struct {
 		Body string `json:"body"`
 	}
-	type validChirp struct {
-		Valid bool `json:"valid"`
+	type cleanedChirp struct {
+		CleanedChirp string `json:"cleaned_body"`
 	}
 	chirpBody := chirpJSON{}
 	decoder := json.NewDecoder(r.Body)
@@ -25,5 +26,22 @@ func handleValidateChirp(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
 		return
 	}
-	respondWithJSON(w, 200, validChirp{Valid: true})
+	respondWithJSON(w, 200, cleanedChirp{CleanedChirp: cleanChirp(chirpBody.Body)})
+}
+
+func cleanChirp(chirp string) string {
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
+	wordList := strings.Split(chirp, " ")
+	for i, word := range wordList {
+		loweredWord := strings.ToLower(word)
+		if _, found := badWords[loweredWord]; found {
+			wordList[i] = "****"
+		}
+	}
+	cleanedChirp := strings.Join(wordList, " ")
+	return cleanedChirp
 }
