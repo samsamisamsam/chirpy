@@ -15,3 +15,8 @@ HASHED_PASSWORD = $2,
 UPDATED_AT = NOW()
 where ID = $3
 returning ID, CREATED_AT, UPDATED_AT, EMAIL;
+
+-- name: UpgradeUser :exec
+update USERS
+set IS_CHIRPY_RED = true
+where ID = $1;

@@ -48,9 +48,17 @@ from USERS
 where EMAIL = $1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+type GetUserByEmailRow struct {
+	ID             uuid.UUID `json:"id"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	Email          string    `json:"email"`
+	HashedPassword string    `json:"hashed_password"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
-	var i User
+	var i GetUserByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
@@ -93,4 +101,15 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		&i.Email,
 	)
 	return i, err
+}
+
+const upgradeUser = `-- name: UpgradeUser :exec
+update USERS
+set IS_CHIRPY_RED = true
+where ID = $1
+`
+
+func (q *Queries) UpgradeUser(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, upgradeUser, id)
+	return err
 }

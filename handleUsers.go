@@ -204,6 +204,7 @@ func (cfg *apiConfig) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: updatedUserInfo.CreatedAt,
 		UpdatedAt: updatedUserInfo.UpdatedAt,
 		ID:        updatedUserInfo.ID,
+		IsChirpyRed: updatedUserInfo.,
 	})
 }
 
@@ -214,8 +215,36 @@ type UpdateParams struct {
 }
 
 type UpdateUserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Email       string    `json:"email"`
+	IsChirpyRed bool      `json:"is_chirpy_red"`
+}
+
+type UpgradeUserRequest struct {
+	Event string `json:"event"`
+	Data  struct {
+		UserID uuid.UUID `json:"user_id"`
+	} `json:"data"`
+}
+
+func (cfg *apiConfig) handleUpgradeUser(w http.ResponseWriter, r *http.Request) {
+	upgradeUserRequest := UpgradeUserRequest{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&upgradeUserRequest)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error decoding request", err)
+		return
+	}
+	if upgradeUserRequest.Event != "user.upgraded" {
+		respondWithJSON(w, http.StatusNoContent, nil)
+		return
+	}
+	err = cfg.dbQueries.UpgradeUser(r.Context(), upgradeUserRequest.Data.UserID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "user not found", err)
+		return
+	}
+	respondWithJSON(w, http.StatusNoContent, nil)
 }
