@@ -118,3 +118,34 @@ type chirpDB struct {
 	Body      string    `json:"body"`
 	UserID    uuid.UUID `json:"user_id"`
 }
+
+func (cfg *apiConfig) handleDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	authBearer, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "invalid token", err)
+		return
+	}
+	userID, err := auth.ValidateJWT(authBearer, cfg.tokenSecret)
+
+	chirpIDString := r.PathValue("chirpID")
+	chirpID, err := uuid.Parse(chirpIDString)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid chirp ID", err)
+		return
+	}
+	chirpUserID, err := cfg.dbQueries.GetUserIDFromChirpID(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "error finding chirp", err)
+		return
+	}
+	if userID != chirpUserID {
+		respondWithError(w, http.StatusForbidden, "unauthorized", err)
+		return
+	}
+	err = cfg.dbQueries.DeleteChirp(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error deleting chirp", err)
+		return
+	}
+	respondWithJSON(w, http.StatusNoContent, nil)
+}

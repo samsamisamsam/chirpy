@@ -12,3 +12,12 @@ order by CREATED_AT;
 select ID, CREATED_AT, UPDATED_AT, BODY, USER_ID
 from CHIRPS
 where ID = $1;
+
+-- name: GetUserIDFromChirpID :one
+select USER_ID
+from CHIRPS
+where ID = $1;
+
+-- name: DeleteChirp :exec
+delete from CHIRPS
+where ID = $1;

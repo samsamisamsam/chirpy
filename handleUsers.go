@@ -158,3 +158,64 @@ func (cfg *apiConfig) handleRevoke(w http.ResponseWriter, r *http.Request) {
 	}
 	respondWithJSON(w, http.StatusNoContent, nil)
 }
+
+type UpdateUserRequest struct {
+	Email    string
+	Password string
+}
+
+func (cfg *apiConfig) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	accesToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "no valid token", err)
+		return
+	}
+	userID, err := auth.ValidateJWT(accesToken, cfg.tokenSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid token", err)
+		return
+	}
+	updateUserRequest := UpdateUserRequest{}
+	decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(&updateUserRequest)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error decoding user update request", err)
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(updateUserRequest.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error hashing password", err)
+		return
+	}
+
+	updateParams := database.UpdateUserParams{
+		Email:          updateUserRequest.Email,
+		HashedPassword: hashedPassword,
+		ID:             userID,
+	}
+	updatedUserInfo, err := cfg.dbQueries.UpdateUser(r.Context(), updateParams)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error updating user info", err)
+		return
+	}
+	respondWithJSON(w, http.StatusOK, UpdateUserResponse{
+		Email:     updatedUserInfo.Email,
+		CreatedAt: updatedUserInfo.CreatedAt,
+		UpdatedAt: updatedUserInfo.UpdatedAt,
+		ID:        updatedUserInfo.ID,
+	})
+}
+
+type UpdateParams struct {
+	Email          string
+	HashedPassword string
+	UserID         uuid.UUID
+}
+
+type UpdateUserResponse struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+}
