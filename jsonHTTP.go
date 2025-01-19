@@ -8,14 +8,14 @@ import (
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	encoder := json.NewEncoder(w)
-	err := encoder.Encode(payload)
+	dat, err := json.Marshal(payload)
 	if err != nil {
-		log.Println("Error Marshalling the response")
+		log.Printf("Error marshalling JSON: %s", err)
 		w.WriteHeader(500)
 		return
 	}
+	w.WriteHeader(code)
+	w.Write(dat)
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string, err error) {

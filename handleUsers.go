@@ -51,6 +51,7 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 		Email:        user.Email,
+		IsChirpyRed:  user.IsChirpyRed,
 		Token:        tokenString,
 		RefreshToken: refreshToken,
 	}
@@ -64,6 +65,7 @@ type UserWithoutPassword struct {
 	Email        string    `json:"email"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 type LoginInfo struct {
@@ -200,11 +202,11 @@ func (cfg *apiConfig) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondWithJSON(w, http.StatusOK, UpdateUserResponse{
-		Email:     updatedUserInfo.Email,
-		CreatedAt: updatedUserInfo.CreatedAt,
-		UpdatedAt: updatedUserInfo.UpdatedAt,
-		ID:        updatedUserInfo.ID,
-		IsChirpyRed: updatedUserInfo.,
+		Email:       updatedUserInfo.Email,
+		CreatedAt:   updatedUserInfo.CreatedAt,
+		UpdatedAt:   updatedUserInfo.UpdatedAt,
+		ID:          updatedUserInfo.ID,
+		IsChirpyRed: updatedUserInfo.IsChirpyRed,
 	})
 }
 
@@ -230,9 +232,18 @@ type UpgradeUserRequest struct {
 }
 
 func (cfg *apiConfig) handleUpgradeUser(w http.ResponseWriter, r *http.Request) {
+	requestAPIKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "invalid api key", err)
+		return
+	}
+	if requestAPIKey != cfg.polkaKey {
+		respondWithError(w, http.StatusUnauthorized, "invalid api key", err)
+		return
+	}
 	upgradeUserRequest := UpgradeUserRequest{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&upgradeUserRequest)
+	err = decoder.Decode(&upgradeUserRequest)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "error decoding request", err)
 		return

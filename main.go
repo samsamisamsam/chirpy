@@ -27,6 +27,7 @@ func main() {
 		dbQueries:   dbQueries,
 		platform:    os.Getenv("PLATFORM"),
 		tokenSecret: os.Getenv("TOKENSECRET"),
+		polkaKey:    os.Getenv("POLKA_KEY"),
 	}
 
 	const port = "8080"
@@ -62,6 +63,7 @@ type apiConfig struct {
 	dbQueries      *database.Queries
 	platform       string
 	tokenSecret    string
+	polkaKey       string
 }
 
 func (c *apiConfig) mwareHits(next http.Handler) http.Handler {
