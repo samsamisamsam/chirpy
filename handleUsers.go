@@ -109,6 +109,52 @@ func (cfg *apiConfig) handleDeleteAllUsers(w http.ResponseWriter, r *http.Reques
 	respondWithJSON(w, http.StatusOK, nil)
 }
 
-func (cfg *apiConfig) handleRefresh(w http.ResponseWriter, r *http.Request) {
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
 
+func (cfg *apiConfig) handleRefresh(w http.ResponseWriter, r *http.Request) {
+	requestRefreshToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error getting authorization", err)
+		return
+	}
+	refreshTokenTable, err := cfg.dbQueries.GetUserWithToken(r.Context(), requestRefreshToken)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "no refresh token", err)
+		return
+	}
+	if refreshTokenTable.RevokedAt.Valid {
+		respondWithError(w, http.StatusUnauthorized, "token revoked", err)
+		return
+	}
+	if refreshTokenTable.ExpiresAt.Before(time.Now()) {
+		respondWithError(w, http.StatusUnauthorized, "token expired", err)
+		return
+	}
+	accessToken, err := auth.MakeJWT(refreshTokenTable.UserID, cfg.tokenSecret)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error making JWT", err)
+		return
+	}
+	accessTokenResponse := AccessTokenResponse{Token: accessToken}
+	respondWithJSON(w, http.StatusOK, accessTokenResponse)
+}
+
+type AccessTokenResponse struct {
+	Token string `json:"token"`
+}
+
+func (cfg *apiConfig) handleRevoke(w http.ResponseWriter, r *http.Request) {
+	authTokenBearer, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error getting bearer", err)
+		return
+	}
+	err = cfg.dbQueries.RevokeToken(r.Context(), authTokenBearer)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error revoking token", err)
+		return
+	}
+	respondWithJSON(w, http.StatusNoContent, nil)
 }
