@@ -35,22 +35,35 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error making refresh token", err)
+		return
+	}
+	tokenParams := database.StoreRefreshTokenParams{
+		Token:  refreshToken,
+		UserID: user.ID,
+	}
+	cfg.dbQueries.StoreRefreshToken(r.Context(), tokenParams)
+
 	userWithoutPassword := UserWithoutPassword{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     tokenString,
+		ID:           user.ID,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Email:        user.Email,
+		Token:        tokenString,
+		RefreshToken: refreshToken,
 	}
 	respondWithJSON(w, http.StatusOK, userWithoutPassword)
 }
 
 type UserWithoutPassword struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 type LoginInfo struct {
@@ -94,4 +107,8 @@ func (cfg *apiConfig) handleDeleteAllUsers(w http.ResponseWriter, r *http.Reques
 	cfg.dbQueries.DeleteAllUsers(r.Context())
 	cfg.fileserverHits.Store(0)
 	respondWithJSON(w, http.StatusOK, nil)
+}
+
+func (cfg *apiConfig) handleRefresh(w http.ResponseWriter, r *http.Request) {
+
 }

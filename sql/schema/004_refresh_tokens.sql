@@ -3,7 +3,7 @@ create table REFRESH_TOKENS (
     TOKEN text primary key,
     CREATED_AT timestamp not null,
     UPDATED_AT timestamp not null,
-    USER_ID uuid references USERS (ID) on delete cascade,
+    USER_ID uuid not null references USERS (ID) on delete cascade,
     EXPIRES_AT timestamp not null,
     REVOKED_AT timestamp
 );
