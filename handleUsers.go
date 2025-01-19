@@ -29,12 +29,7 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expiresIn := time.Hour
-	if 0 < loginInfo.ExpiresInSeconds && loginInfo.ExpiresInSeconds < 3600 {
-		expiresIn = time.Duration(loginInfo.ExpiresInSeconds) * time.Second
-	}
-
-	tokenString, err := auth.MakeJWT(user.ID, cfg.tokenSecret, expiresIn)
+	tokenString, err := auth.MakeJWT(user.ID, cfg.tokenSecret)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "error making token", err)
 		return
